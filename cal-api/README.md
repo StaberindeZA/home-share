@@ -16,7 +16,7 @@ Calendar API
   - name
   - createdAt
   - updatedAt
-- Calendar
+- Calendar (add in v2)
   - id
   - entries
 - Entry
