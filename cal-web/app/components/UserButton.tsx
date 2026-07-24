@@ -1,6 +1,6 @@
 'use client'
 
-import { addEntry, deleteEntry } from "../actions";
+import { addEntry, removeEntry } from "../actions";
 import { User } from "../types";
 
 interface UserButtonProps {
@@ -13,7 +13,7 @@ interface UserButtonProps {
 export default function UserButton(props: UserButtonProps) {
   return (
     <div onClick={async () => {
-      props.entryId ? deleteEntry(props.entryId) : addEntry(props.user.id, props.startTime, props.endTime)
+      props.entryId ? removeEntry(props.entryId) : addEntry(props.user.id, props.startTime, props.endTime)
     }}>{props.entryId ? "BOOKED" : "open"}</div>
   )
 }
