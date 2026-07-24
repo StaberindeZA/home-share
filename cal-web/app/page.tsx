@@ -3,7 +3,7 @@ import UserButton from "./components/UserButton";
 import { users } from "./constants";
 
 export default async function Home() {
-  const rows = await listEntries()
+  const rows = await listEntries(Intl.DateTimeFormat().resolvedOptions().timeZone)
   return (
     <>
       <h1>Do you have a meeting?</h1>
