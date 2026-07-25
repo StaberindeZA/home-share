@@ -12,9 +12,11 @@ interface UserButtonProps {
 
 export default function UserButton(props: UserButtonProps) {
   return (
-    <div onClick={async () => {
-      props.entryId ? removeEntry(props.entryId) : addEntry(props.user.id, props.startTime, props.endTime)
-    }}>{props.entryId ? "BOOKED" : "open"}</div>
+    <div
+      className="grid h-8 items-center justify-center active:bg-gray-700 select-none"
+      onClick={async () => {
+        props.entryId ? removeEntry(props.entryId) : addEntry(props.user.id, props.startTime, props.endTime)
+      }}>{props.entryId ? "BOOKED" : "open"}</div>
   )
 }
 

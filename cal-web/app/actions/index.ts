@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createEntry, deleteEntry, fetchListEntries } from "../api";
 import { rows, startIndexMap, users } from "../constants";
 import { convertTimeToUTCISO, convertToLocalTime, wait } from "../utils";
+import { redirect } from "next/navigation";
 
 export async function addEntry(userId: number, startTime: string, endTime: string) {
 	const startDateString = convertTimeToUTCISO(startTime);
@@ -32,7 +33,7 @@ export async function listEntries(timeZone: string) {
 			const startTime = convertToLocalTime(new Date(e.start), timeZone);
 			const startIndex = startIndexMap.get(startTime);
 
-			if (startIndex) {
+			if (!!startIndex || startIndex === 0) {
 				currentRows[startIndex].entryIds[userIndex] = e.id
 			} else {
 				console.error("Could not find index for:", startTime)
@@ -42,4 +43,16 @@ export async function listEntries(timeZone: string) {
 	})
 
 	return currentRows;
+}
+
+export async function saveOptions(formData: FormData) {
+	const checkedUser = formData.get('user-checkbox')
+
+	if (checkedUser === null) {
+		redirect(`/?user=${users[0].id}`)
+	} else if (checkedUser === 'on') {
+		redirect(`/?user=${users[1].id}`)
+	} else {
+		throw new Error('Unexpected checkbox value');
+	}
 }

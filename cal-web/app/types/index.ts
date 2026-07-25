@@ -9,4 +9,7 @@ export type Row = {
 	entryIds: number[];
 }
 
+export type SearchParams = { [key: string]: string | string[] | undefined };
+export type SearchParamsPromise = Promise<SearchParams>;
+
 
