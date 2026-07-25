@@ -2,14 +2,25 @@ import { Row, User } from "../types"
 
 export const API_URL = 'http://localhost:8080'
 
+// TODO: Replace with proper user config
+const userOneId = process.env.USER_ONE_ID || '';
+const userOneName = process.env.USER_ONE_NAME || '';
+const userTwoId = process.env.USER_TWO_ID || '';
+const userTwoName = process.env.USER_TWO_NAME || '';
+
+if (!userOneId || !(userOneId && parseInt(userOneId))) throw new Error('USER_ONE_ID is not configured')
+if (!userOneName) throw new Error('USER_ONE_NAME is not configured')
+if (!userTwoId || !(userTwoId && parseInt(userTwoId))) throw new Error('USER_TWO_ID is not configured')
+if (!userTwoName) throw new Error('USER_TWO_NAME is not configured')
+
 export const users: User[] = [
 	{
-		id: 1,
-		name: "Priscilla",
+		id: parseInt(userOneId),
+		name: userOneName,
 	},
 	{
-		id: 2,
-		name: "Reino",
+		id: parseInt(userTwoId),
+		name: userTwoName,
 	}
 ]
 
