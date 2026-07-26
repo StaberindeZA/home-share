@@ -6,3 +6,4 @@ home with someone.
 ## Service list
 
 - `cal-api` -> Calender API
+- `cal-web` -> Calender Web App
