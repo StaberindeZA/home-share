@@ -26,10 +26,10 @@ func main() {
 	insertUserQuery := `INSERT INTO users (name, email) VALUES (?, ?);`
 	_, err = db.Exec(insertUserQuery, "P", "p@example.com")
 	if err != nil {
-		log.Printf("Insert error: %v", err);
+		log.Printf("Insert error: %v", err)
 	}
 	_, err = db.Exec(insertUserQuery, "R", "r@example.com")
 	if err != nil {
-		log.Printf("Insert error: %v", err);
+		log.Printf("Insert error: %v", err)
 	}
 }

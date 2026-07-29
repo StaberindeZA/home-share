@@ -8,9 +8,14 @@ type CreateEntryDTO struct {
 	End    time.Time `json:"end"`
 }
 
+type UpdateEntryDTO struct {
+	Value int `json:"value"`
+}
+
 type EntryDTO struct {
 	Id     string `json:"id"`
 	UserId string `json:"userId"`
+	Value  int    `json:"value"`
 	Start  string `json:"start"`
 	End    string `json:"end"`
 }

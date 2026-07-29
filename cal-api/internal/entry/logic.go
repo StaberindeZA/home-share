@@ -1,6 +1,7 @@
 package entry
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -25,9 +26,16 @@ func (dl DummyLogic) Read(id string) (Entry, error) {
 	return Entry{
 		id:     id,
 		userId: "123_userid",
+		value:  Booked,
 		start:  time.Now(),
 		end:    time.Now(),
 	}, nil
+}
+
+func (dl DummyLogic) Update(id string, value EntryValue) (string, error) {
+	fmt.Println("Update id:", id, value)
+
+	return "ok", nil
 }
 
 func (dl DummyLogic) Delete(id string) (string, error) {
@@ -59,13 +67,13 @@ func NewDummyLogic() DummyLogic {
 	return DummyLogic{}
 }
 
-type MVPLogic struct{
+type MVPLogic struct {
 	db *sql.DB
 }
 
 func (ml MVPLogic) Create(userId string, start, end time.Time) (string, error) {
-	insertEntriesQuery := `INSERT INTO entries (user_id, start, end) VALUES (?, ?, ?);`
-	if _, err := ml.db.Exec(insertEntriesQuery, userId, start, end); err != nil {
+	insertEntriesQuery := `INSERT INTO entries (user_id, value, start, end) VALUES (?, ?, ?, ?);`
+	if _, err := ml.db.Exec(insertEntriesQuery, userId, Booked, start, end); err != nil {
 		return "error", err
 	}
 
@@ -73,13 +81,36 @@ func (ml MVPLogic) Create(userId string, start, end time.Time) (string, error) {
 }
 
 func (ml MVPLogic) Read(id string) (Entry, error) {
-	fmt.Println("Read id:", id)
 	return Entry{
 		id:     id,
 		userId: "123_userid",
+		value:  1,
 		start:  time.Now(),
 		end:    time.Now(),
 	}, nil
+}
+
+func (ml MVPLogic) Update(id string, value EntryValue) (string, error) {
+	updateQuery := `UPDATE entries SET value = ?, updated_at = ? WHERE id = ?`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	result, err := ml.db.ExecContext(ctx, updateQuery, value, time.Now(), id)
+	if err != nil {
+		log.Fatalf("failed to execute update: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatalf("failed to look up rows affected: %v", err)
+	}
+
+	if rowsAffected != 1 {
+		log.Fatalf("unexpected number of rows affected: %d", rowsAffected)
+	}
+
+	return "ok", nil
 }
 
 func (ml MVPLogic) Delete(id string) (string, error) {
@@ -92,7 +123,7 @@ func (ml MVPLogic) Delete(id string) (string, error) {
 }
 
 func (ml MVPLogic) List(userId string, start, end time.Time) ([]Entry, error) {
-	query := `SELECT id, user_id, start, end FROM entries WHERE user_id = ? and start <= ? and end >= ?`
+	query := `SELECT id, user_id, value, start, end FROM entries WHERE user_id = ? and start <= ? and end >= ?`
 	rows, err := ml.db.Query(query, userId, end, start)
 	if err != nil {
 		return []Entry{}, err
@@ -102,7 +133,7 @@ func (ml MVPLogic) List(userId string, start, end time.Time) ([]Entry, error) {
 	var entries []Entry
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.id, &e.userId, &e.start, &e.end); err != nil {
+		if err := rows.Scan(&e.id, &e.userId, &e.value, &e.start, &e.end); err != nil {
 			log.Fatal(err)
 		}
 		entries = append(entries, e)

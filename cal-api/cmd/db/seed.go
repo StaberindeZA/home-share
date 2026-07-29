@@ -27,11 +27,11 @@ func main() {
 	insertUserQuery := `INSERT INTO users (name, email) VALUES (?, ?);`
 	userOneRes, err := db.Exec(insertUserQuery, "P", "p@example.com")
 	if err != nil {
-		log.Printf("Insert error: %v", err);
+		log.Printf("Insert error: %v", err)
 	}
 	userTwoRes, err := db.Exec(insertUserQuery, "R", "r@example.com")
 	if err != nil {
-		log.Printf("Insert error: %v", err);
+		log.Printf("Insert error: %v", err)
 	}
 
 	userOneId, err := userOneRes.LastInsertId()
@@ -43,11 +43,11 @@ func main() {
 		log.Printf("User Two last InsertId error: %v", err)
 	}
 
-	insertEntriesQuery := `INSERT INTO entries (user_id, start, end) VALUES (?, ?, ?);`
-	if _, err = db.Exec(insertEntriesQuery, userOneId, time.Now(), time.Now()); err != nil {
+	insertEntriesQuery := `INSERT INTO entries (user_id, value, start, end) VALUES (?, ?, ?, ?);`
+	if _, err = db.Exec(insertEntriesQuery, userOneId, 1, time.Now(), time.Now()); err != nil {
 		log.Printf("User one entries insert error: %v", err)
 	}
-	if _, err = db.Exec(insertEntriesQuery, userTwoId, time.Now(), time.Now()); err != nil {
+	if _, err = db.Exec(insertEntriesQuery, userTwoId, 2, time.Now(), time.Now()); err != nil {
 		log.Printf("User two entries insert error: %v", err)
 	}
 }

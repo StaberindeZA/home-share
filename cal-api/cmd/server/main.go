@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+
+	_ "modernc.org/sqlite"
 )
 
 func main() {

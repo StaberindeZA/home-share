@@ -49,6 +49,7 @@ func main() {
 	CREATE TABLE IF NOT EXISTS entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER REFERENCES users(id),
+		value INTEGER NOT NULL DEFAULT 0 CHECK(value IN(0, 1, 2, 3)),
 		start DATETIME,
 		end DATETIME,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -59,4 +60,3 @@ func main() {
 	}
 	fmt.Println("Table verified successfully.")
 }
-

@@ -17,6 +17,7 @@ func New(db *sql.DB) http.Handler {
 	entryController := entry.NewEntryController(entryLogic)
 	mux.HandleFunc("POST /v1/entry", entryController.Create)
 	mux.HandleFunc("/v1/entry/{id}", entryController.Read)
+	mux.HandleFunc("PUT /v1/entry/{id}", entryController.Update)
 	mux.HandleFunc("DELETE /v1/entry/{id}", entryController.Delete)
 	mux.HandleFunc("/v1/entry", entryController.List)
 

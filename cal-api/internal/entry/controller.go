@@ -26,9 +26,6 @@ func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("here are the values from create entry")
-	fmt.Println(createEntry)
-
 	message, err := c.logic.Create(createEntry.UserId, createEntry.Start, createEntry.End)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,6 +56,32 @@ func (c EntryController) Read(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	id := r.PathValue("id")
+	var updateEntry UpdateEntryDTO
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&updateEntry)
+	if err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	message, err := c.logic.Update(id, EntryValue(updateEntry.Value))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Write([]byte(message))
+
 }
 
 func (c EntryController) Delete(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +138,7 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 		data = append(data, EntryDTO{
 			Id:     entry.id,
 			UserId: entry.userId,
+			Value:  int(entry.value),
 			Start:  entry.start.String(),
 			End:    entry.end.String(),
 		})
