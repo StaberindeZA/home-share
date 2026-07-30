@@ -27,6 +27,30 @@ export async function createEntry(userId: number, start: string, end: string) {
 	}
 }
 
+export async function updateEntry(entryId: number, entryValue: number) {
+	const data = {
+		value: entryValue
+	}
+	const url = new URL(`${API_URL}/v1/entry/${entryId}`);
+	try {
+		const response = await fetch(url, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(data)
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! Status: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch (error) {
+		console.error('Error:', error);
+	}
+}
+
 export async function deleteEntry(entryId: number) {
 	const url = new URL(`${API_URL}/v1/entry/${entryId}`);
 	try {

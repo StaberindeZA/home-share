@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from "next/cache";
-import { createEntry, deleteEntry, fetchListEntries } from "../api";
+import { createEntry, deleteEntry, fetchListEntries, updateEntry } from "../api";
 import { rows, startIndexMap, users } from "../constants";
 import { convertTimeToUTCISO, convertToLocalTime, wait } from "../utils";
 import { redirect } from "next/navigation";
@@ -10,6 +10,12 @@ export async function addEntry(userId: number, startTime: string, endTime: strin
 	const startDateString = convertTimeToUTCISO(startTime);
 	const endDateString = convertTimeToUTCISO(endTime);
 	await createEntry(userId, startDateString, endDateString)
+
+	revalidatePath('/')
+}
+
+export async function changeEntry(entryId: number, entryValue: number) {
+	await updateEntry(entryId, entryValue);
 
 	revalidatePath('/')
 }
@@ -34,7 +40,7 @@ export async function listEntries(timeZone: string) {
 			const startIndex = startIndexMap.get(startTime);
 
 			if (!!startIndex || startIndex === 0) {
-				currentRows[startIndex].entryIds[userIndex] = e.id
+				currentRows[startIndex].entryIds[userIndex] = { id: e.id, value: e.value }
 			} else {
 				console.error("Could not find index for:", startTime)
 			}

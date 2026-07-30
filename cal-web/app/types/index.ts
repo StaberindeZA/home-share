@@ -3,10 +3,15 @@ export type User = {
 	name: string;
 }
 
+export type RowEntry = {
+	id: number,
+	value: number,
+}
+
 export type Row = {
 	start: string;
 	end: string;
-	entryIds: number[];
+	entryIds: RowEntry[];
 }
 
 export type SearchParams = { [key: string]: string | string[] | undefined };

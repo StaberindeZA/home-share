@@ -34,8 +34,8 @@ export default async function Home({ searchParams }: HomePageProps) {
           {rows.map((row) => (
             <tr key={row.start} className="h-8 border border-white">
               <th scope="row">{convert24to12(row.start)}</th>
-              <td><UserButton startTime={row.start} endTime={row.end} user={users[0]} entryId={row.entryIds.at(0)} /></td>
-              <td><UserButton startTime={row.start} endTime={row.end} user={users[1]} entryId={row.entryIds.at(1)} /></td>
+              <td><UserButton startTime={row.start} endTime={row.end} user={users[0]} rowEntry={row.entryIds.at(0)} /></td>
+              <td><UserButton startTime={row.start} endTime={row.end} user={users[1]} rowEntry={row.entryIds.at(1)} /></td>
             </tr>
           ))}
         </tbody>
