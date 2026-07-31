@@ -22,7 +22,7 @@ export default async function Home({ searchParams }: HomePageProps) {
 
   return (
     <>
-      <table className="m-4">
+      <table className="m-4 w-full table-fixed max-w-2xl">
         <thead>
           <tr key="header" className="text-lg">
             <th>Time</th>
@@ -32,7 +32,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.start} className="h-8 border border-white">
+            <tr key={row.start} className="h-8 border border-black dark:border-white hover:bg-gray-100 hover:dark:bg-gray-800">
               <th scope="row">{convert24to12(row.start)}</th>
               <td><UserButton startTime={row.start} endTime={row.end} user={users[0]} rowEntry={row.entryIds.at(0)} /></td>
               <td><UserButton startTime={row.start} endTime={row.end} user={users[1]} rowEntry={row.entryIds.at(1)} /></td>

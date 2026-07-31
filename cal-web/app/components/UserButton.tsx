@@ -19,8 +19,10 @@ export default function UserButton({ startTime, endTime, user, rowEntry }: UserB
 
   const [loading, setLoading] = useState(false);
   const onClickHandler = async () => {
+    if (loading) return;
+
     try {
-      if (!entryValue && entryValue != 0) {
+      if (!entryId) {
         setLoading(true)
         await addEntry(user.id, startTime, endTime)
       } else if (entryValue >= 0 && entryValue < 3 && entryId) {
@@ -44,8 +46,8 @@ export default function UserButton({ startTime, endTime, user, rowEntry }: UserB
 
   return (
     <div
-      className="grid h-8 items-center justify-center active:bg-gray-700 select-none"
-      onClick={onClickHandler}>{!loading ? entryValueDisplay : "Loading..."}</div>
+      className="grid h-8 items-center justify-center active:bg-gray-200 active:dark:bg-gray-700 select-none"
+      onClick={onClickHandler}>{entryValueDisplay}</div>
   )
 }
 
