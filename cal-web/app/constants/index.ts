@@ -1,6 +1,6 @@
 import { Row, User } from "../types"
 
-export const API_URL = 'http://localhost:8080'
+export const API_URL = process.env.API_URL || ''
 
 // TODO: Replace with proper user config
 const userOneId = process.env.USER_ONE_ID || '';

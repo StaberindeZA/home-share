@@ -7,3 +7,11 @@ home with someone.
 
 - `cal-api` -> Calender API
 - `cal-web` -> Calender Web App
+
+## To do list
+
+- Containerize
+- Add user authentication
+- Add an admin panel
+  - Still figuring this one out. Longer term the idea is to allow users to
+    signup to the Calendar and create their own calendar on the hosted instance.
