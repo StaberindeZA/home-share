@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("sqlite", "assets/app.db?_time_format=sqlite")
+	db, err := sql.Open("sqlite", "/data/app.db?_time_format=sqlite")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

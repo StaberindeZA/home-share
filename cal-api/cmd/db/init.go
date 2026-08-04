@@ -4,12 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	_ "modernc.org/sqlite"
 )
 
 func main() {
-	db, err := sql.Open("sqlite", "assets/app.db?_time_format=sqlite")
+	if _, err := os.Stat("/data/app.db"); err == nil {
+		log.Println("SQLite db already exists. Skipping init.")
+		os.Exit(0)
+	}
+
+	db, err := sql.Open("sqlite", "/data/app.db?_time_format=sqlite")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

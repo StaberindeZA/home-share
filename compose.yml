@@ -23,11 +23,27 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
+  cal-api-init:
+    build:
+      context: cal-api/.
+      target: initializer
+    volumes:
+      - "cal-api-assets:/data" 
+    restart: "no"
+
   cal-api:
-    build: cal-api/.
+    build: 
+      context: cal-api/.
+      target: app
     image: cal-api-image
     container_name: cal-api-container
     ports:
       - "8080:8080"
     volumes:
-      - "~/projects/home-share/cal-api/assets:/app/assets" 
+      - "cal-api-assets:/data" 
+    depends_on:
+      cal-api-init:
+        condition: service_completed_successfully
+
+volumes:
+  cal-api-assets:
