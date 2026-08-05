@@ -4,21 +4,14 @@ services:
     build:
       context: cal-web/.
       dockerfile: Dockerfile
-      args:
-        USER_ONE_ID: "1"
-        USER_ONE_NAME: "Jennifer"
-        USER_TWO_ID: "2"
-        USER_TWO_NAME: "Jeff"
     image: cal-web-image 
     container_name: cal-web-container
     environment:
       NODE_ENV: production
       PORT: "3000"
-      USER_ONE_ID: "1"
-      USER_ONE_NAME: "Jennifer"
-      USER_TWO_ID: "2"
-      USER_TWO_NAME: "Jeff"
       API_URL: "http://cal-api:8080"
+    env_file:
+      - cal-web/.env
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -37,6 +30,9 @@ services:
       target: app
     image: cal-api-image
     container_name: cal-api-container
+    env_file:
+      - cal-api/.env
+      - cal-api/.env.production
     ports:
       - "8080:8080"
     volumes:

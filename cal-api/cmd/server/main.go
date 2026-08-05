@@ -1,16 +1,31 @@
 package main
 
 import (
-	"cal-api/internal/router"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"cal-api/internal/router"
+
+	"github.com/joho/godotenv"
 	_ "modernc.org/sqlite"
 )
 
 func main() {
-	db, err := sql.Open("sqlite", "/data/app.db?_time_format=sqlite")
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Error loading .env file")
+	}
+
+	dbHost := os.Getenv("DB_HOST")
+	if _, err := os.Stat(dbHost); err != nil {
+		log.Fatalf("SQL db does not exist at %s", dbHost)
+		os.Exit(0)
+	}
+
+	db, err := sql.Open("sqlite", fmt.Sprintf("%s?_time_format=sqlite", dbHost))
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

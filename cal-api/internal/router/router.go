@@ -1,10 +1,18 @@
+// Package router holds all routes exposed by cal-api
 package router
 
 import (
-	"cal-api/internal/entry"
-	"cal-api/internal/middleware"
 	"database/sql"
 	"net/http"
+
+	"cal-api/internal/auth"
+	"cal-api/internal/email"
+	"cal-api/internal/entry"
+	"cal-api/internal/googleauth"
+	"cal-api/internal/home"
+	"cal-api/internal/middleware"
+	"cal-api/internal/otp"
+	"cal-api/internal/user"
 
 	_ "modernc.org/sqlite"
 )
@@ -12,14 +20,35 @@ import (
 func New(db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
-	//entryLogic := entry.NewDummyLogic()
+	userLogic := user.NewLiteLogic(db)
+
+	emailMessages := email.NewGomailMessages()
+	emailSender := email.NewGomailSender(emailMessages)
+
+	otpLogic := otp.NewLiteOtp(db, userLogic)
+	otpController := otp.NewOtpController(otpLogic, emailSender)
+	mux.HandleFunc("POST /v1/otp", otpController.RequestOtp)
+	mux.HandleFunc("POST /v1/otp/verify", otpController.VerifyOtp)
+
+	googleAuthLogic := googleauth.NewSimpleGALogic(db, userLogic)
+	googleAuthController := googleauth.NewGoogleAuthController(googleAuthLogic)
+	mux.HandleFunc("POST /v1/auth/google", googleAuthController.VerifyIdToken)
+
+	authMiddleware := auth.NewAuthMiddleware(userLogic)
+	authController := auth.NewAuthController(userLogic)
+	mux.Handle("GET /v1/auth/userinfo", authMiddleware.Protected(http.HandlerFunc(authController.UserInfo)))
+
 	entryLogic := entry.NewMVPLogic(db)
 	entryController := entry.NewEntryController(entryLogic)
-	mux.HandleFunc("POST /v1/entry", entryController.Create)
-	mux.HandleFunc("/v1/entry/{id}", entryController.Read)
-	mux.HandleFunc("PUT /v1/entry/{id}", entryController.Update)
-	mux.HandleFunc("DELETE /v1/entry/{id}", entryController.Delete)
-	mux.HandleFunc("/v1/entry", entryController.List)
+	mux.Handle("POST /v1/entry", authMiddleware.Protected(http.HandlerFunc(entryController.Create)))
+	mux.Handle("/v1/entry/{id}", authMiddleware.Protected(http.HandlerFunc(entryController.Read)))
+	mux.Handle("PUT /v1/entry/{id}", authMiddleware.Protected(http.HandlerFunc(entryController.Update)))
+	mux.Handle("DELETE /v1/entry/{id}", authMiddleware.Protected(http.HandlerFunc(entryController.Delete)))
+	mux.Handle("/v1/entry", authMiddleware.Protected(http.HandlerFunc(entryController.List)))
+
+	homeLogic := home.NewStaticLogic(userLogic)
+	homeController := home.NewHomeController(homeLogic)
+	mux.Handle("GET /v1/home/{slug}/mates", authMiddleware.Protected(http.HandlerFunc(homeController.ListHomeMates)))
 
 	return middleware.Logger(mux)
 }

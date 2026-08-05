@@ -8,17 +8,17 @@ type EntryDB struct {
 }
 
 type Entry struct {
-	id     string
-	userId string
+	id     int
+	userId int
 	value  EntryValue
 	start  time.Time
 	end    time.Time
 }
 
 type EntryLogic interface {
-	Create(userId string, start, end time.Time) (string, error)
-	Read(id string) (Entry, error)
-	Update(id string, value EntryValue) (string, error)
-	Delete(id string) (string, error)
-	List(userId string, start, end time.Time) ([]Entry, error)
+	Create(userId int, start, end time.Time) (string, error)
+	Read(id int) (Entry, error)
+	Update(id int, value EntryValue) (string, error)
+	Delete(id int) (string, error)
+	List(userId int, start, end time.Time) ([]Entry, error)
 }

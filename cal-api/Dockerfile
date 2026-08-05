@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/main cmd/server/main.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/init cmd/db/init.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/init cmd/db/init/init.go
 
 FROM alpine:latest AS initializer
 COPY --from=builder /bin/init .

@@ -1,9 +1,14 @@
 package entry
 
 import (
+	"cal-api/internal/user"
+
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -11,9 +16,21 @@ type EntryController struct {
 	logic EntryLogic
 }
 
+func NewEntryController(logic EntryLogic) EntryController {
+	return EntryController{
+		logic: logic,
+	}
+}
+
 func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	user, ok := r.Context().Value("user").(user.User)
+	if !ok {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -26,7 +43,9 @@ func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message, err := c.logic.Create(createEntry.UserId, createEntry.Start, createEntry.End)
+	log.Println("From Create", user.Id)
+
+	message, err := c.logic.Create(user.Id, createEntry.Start, createEntry.End)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -36,13 +55,25 @@ func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c EntryController) Read(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	idString := r.PathValue("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	// TODO - With this function a double read on entity occurs
+	if err := c.VerifyUserForEntity(id, r); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
 	entry, err := c.logic.Read(id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	data := EntryDTO{
 		Id:     entry.id,
 		UserId: entry.userId,
@@ -64,11 +95,22 @@ func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.PathValue("id")
+	idString := r.PathValue("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if err := c.VerifyUserForEntity(id, r); err != nil {
+		log.Print(err.Error())
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
 	var updateEntry UpdateEntryDTO
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&updateEntry)
+	err = decoder.Decode(&updateEntry)
 	if err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
@@ -85,7 +127,17 @@ func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c EntryController) Delete(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	idString := r.PathValue("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if err := c.VerifyUserForEntity(id, r); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
 	message, err := c.logic.Delete(id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -97,13 +149,16 @@ func (c EntryController) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
-	userId := r.URL.Query().Get("userId")
-	if userId == "" {
+	userIdString := r.URL.Query().Get("userId")
+	if userIdString == "" {
 		http.Error(w, "Missing userId query param", http.StatusBadRequest)
 	}
-	start := r.URL.Query().Get("start")
+	userId, err := strconv.Atoi(userIdString)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 	var startTime time.Time
-	var err error
+	start := r.URL.Query().Get("start")
 	if start == "" {
 		startTime = time.Now()
 	} else {
@@ -152,8 +207,22 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewEntryController(logic EntryLogic) EntryController {
-	return EntryController{
-		logic: logic,
+func (c EntryController) VerifyUserForEntity(entryId int, r *http.Request) error {
+	user, ok := r.Context().Value("user").(user.User)
+	if !ok {
+		return errors.New("User not in context")
 	}
+
+	entry, err := c.logic.Read(entryId)
+	if err != nil {
+		return err
+	}
+
+	log.Print(entry.userId, user.Id)
+
+	if entry.userId != user.Id {
+		return errors.New("User does not match entity user")
+	}
+
+	return nil
 }

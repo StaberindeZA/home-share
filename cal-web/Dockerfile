@@ -49,15 +49,6 @@ COPY . .
 ENV NODE_ENV=production
 ENV CI=true
 
-ARG USER_ONE_ID
-ARG USER_ONE_NAME
-ARG USER_TWO_ID
-ARG USER_TWO_NAME
-
-ENV USER_ONE_ID=${USER_ONE_ID}
-ENV USER_ONE_NAME=${USER_ONE_NAME}
-ENV USER_TWO_ID=${USER_TWO_ID}
-ENV USER_TWO_NAME=${USER_TWO_NAME}
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
