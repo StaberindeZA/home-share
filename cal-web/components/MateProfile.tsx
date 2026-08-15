@@ -56,8 +56,12 @@ export default function MateProfile({ email, name }: MateProfileProps) {
           </p>
         )}
 
-        <button type="submit" className="border border-white max-w-24">
-          Save
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full bg-primary-button-light dark:bg-primary-button-dark text-text-light dark:text-text-dark p-2 rounded hover:bg-primary-button-light-darker hover:dark:bg-primary-button-dark-darker disabled:bg-gray-500"
+        >
+          {isPending ? "Processing..." : "Save"}
         </button>
 
         {state.success && (
