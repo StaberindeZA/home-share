@@ -21,7 +21,7 @@ func GenerateBackendJWT(email string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(), // 24 hours
+		"exp":   time.Now().Add(time.Hour * 24 * 7).Unix(), // 7 days
 	})
 	return token.SignedString(jwtSecret)
 }
