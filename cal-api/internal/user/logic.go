@@ -1,8 +1,11 @@
 package user
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"log"
+	"time"
 )
 
 type LiteLogic struct {
@@ -11,8 +14,8 @@ type LiteLogic struct {
 
 func (ll LiteLogic) FindOrCreate(id int, name, email string) (User, error) {
 	var u User
-	findByIdQuery := `SELECT id, name, email, created_at, updated_at  FROM users WHERE id = ?`
-	err := ll.db.QueryRow(findByIdQuery, id).Scan(&u.Id, &u.Name, &u.Email, &u.createdAt, &u.updatedAt)
+	findByIDQuery := `SELECT id, name, email, created_at, updated_at  FROM users WHERE id = ?`
+	err := ll.db.QueryRow(findByIDQuery, id).Scan(&u.Id, &u.Name, &u.Email, &u.createdAt, &u.updatedAt)
 
 	if err == sql.ErrNoRows {
 		findByEmailQuery := `SELECT id, name, email, created_at, updated_at  FROM users WHERE email = ?`
@@ -43,6 +46,32 @@ func (ll LiteLogic) FindByEmail(email string) (User, error) {
 	}
 
 	return u, nil
+}
+
+func (ll LiteLogic) UpdateByEmail(email, name string) (string, error) {
+	updateQuery := `UPDATE users SET name = ?, updated_at = ? WHERE email = ?;`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	result, err := ll.db.ExecContext(ctx, updateQuery, name, time.Now(), email)
+	if err != nil {
+		log.Printf("failed to execute update: %v", err)
+		return "", err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("failed to look up rows affected: %v", err)
+		return "", err
+	}
+
+	if rowsAffected != 1 {
+		log.Printf("unexpected number of rows affected: %d", rowsAffected)
+		return "", errors.New("unexpected number of rows affected")
+	}
+
+	return "ok", nil
 }
 
 func NewLiteLogic(db *sql.DB) LiteLogic {

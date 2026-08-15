@@ -1,3 +1,4 @@
+// Package entry defines the SQL entry table
 package entry
 
 import "time"

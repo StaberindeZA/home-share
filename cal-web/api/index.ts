@@ -3,7 +3,7 @@
 import { auth, SessionWithToken } from "@/auth";
 import { API_URL } from "@/constants";
 import { convertTimeToUTCISO } from "@/utils";
-import { HomeMate, UnauthorizedError } from "./types";
+import { HomeMate, MateProfile, UnauthorizedError } from "./types";
 
 async function getAccessToken() {
   const session = (await auth()) as SessionWithToken;
@@ -181,6 +181,59 @@ export async function fetchListHomeMates(homeSlug: string) {
     }
     const responseData = await response.json();
     return responseData as HomeMate[];
+  } catch (err) {
+    console.error("Error in fetchListHomeMates", err);
+    throw err;
+  }
+}
+
+export async function fetchMateProfile() {
+  const accessToken = await getAccessToken();
+  const url = new URL(`${API_URL}/v1/user`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new UnauthorizedError("fetchMateProfile");
+      } else {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+    }
+    const responseData = await response.json();
+    return responseData as MateProfile;
+  } catch (err) {
+    console.error("Error in fetchListHomeMates", err);
+    throw err;
+  }
+}
+
+export async function updateMateProfile(name: string) {
+  const accessToken = await getAccessToken();
+  const data = {
+    name,
+  };
+  const url = new URL(`${API_URL}/v1/user`);
+  try {
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new UnauthorizedError("updateMateProfile");
+      } else {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+    }
+    return;
   } catch (err) {
     console.error("Error in fetchListHomeMates", err);
     throw err;

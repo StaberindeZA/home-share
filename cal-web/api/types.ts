@@ -6,6 +6,11 @@ export interface HomeMate {
   name: string;
 }
 
+export interface MateProfile {
+  name: string;
+  email: string;
+}
+
 export class UnauthorizedError extends Error {
   public readonly statusCode: number;
   constructor(message: string) {

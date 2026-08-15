@@ -46,6 +46,10 @@ func New(db *sql.DB) http.Handler {
 	mux.Handle("DELETE /v1/entry/{id}", authMiddleware.Protected(http.HandlerFunc(entryController.Delete)))
 	mux.Handle("/v1/entry", authMiddleware.Protected(http.HandlerFunc(entryController.List)))
 
+	userController := user.NewUserController(userLogic)
+	mux.Handle("GET /v1/user", authMiddleware.Protected(http.HandlerFunc(userController.ReadLoggedInUser)))
+	mux.Handle("PUT /v1/user", authMiddleware.Protected(http.HandlerFunc(userController.UpdateLoggedInUser)))
+
 	homeLogic := home.NewStaticLogic(userLogic)
 	homeController := home.NewHomeController(homeLogic)
 	mux.Handle("GET /v1/home/{slug}/mates", authMiddleware.Protected(http.HandlerFunc(homeController.ListHomeMates)))

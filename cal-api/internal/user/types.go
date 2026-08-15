@@ -1,3 +1,4 @@
+// Package user defines the SQL user table
 package user
 
 import "time"
@@ -13,4 +14,5 @@ type User struct {
 type UserLogic interface {
 	FindOrCreate(id int, name, email string) (User, error)
 	FindByEmail(email string) (User, error)
+	UpdateByEmail(email, name string) (string, error)
 }

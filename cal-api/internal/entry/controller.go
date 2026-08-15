@@ -1,8 +1,6 @@
 package entry
 
 import (
-	"cal-api/internal/user"
-
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"cal-api/internal/user"
 )
 
 type EntryController struct {
@@ -123,7 +123,6 @@ func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte(message))
-
 }
 
 func (c EntryController) Delete(w http.ResponseWriter, r *http.Request) {
@@ -207,13 +206,13 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c EntryController) VerifyUserForEntity(entryId int, r *http.Request) error {
+func (c EntryController) VerifyUserForEntity(entryID int, r *http.Request) error {
 	user, ok := r.Context().Value("user").(user.User)
 	if !ok {
-		return errors.New("User not in context")
+		return errors.New("user not in context")
 	}
 
-	entry, err := c.logic.Read(entryId)
+	entry, err := c.logic.Read(entryID)
 	if err != nil {
 		return err
 	}
@@ -221,7 +220,7 @@ func (c EntryController) VerifyUserForEntity(entryId int, r *http.Request) error
 	log.Print(entry.userId, user.Id)
 
 	if entry.userId != user.Id {
-		return errors.New("User does not match entity user")
+		return errors.New("user does not match entity user")
 	}
 
 	return nil

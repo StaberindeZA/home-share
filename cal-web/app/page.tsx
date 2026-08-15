@@ -1,22 +1,14 @@
 import { redirect } from "next/navigation";
-import { listEntries, listHomeMates } from "@/actions";
+import { getMateProfile, listEntries, listHomeMates } from "@/actions";
 import UserButton from "@/components/UserButton";
-import { SearchParamsPromise } from "@/types";
 import { convert24to12 } from "@/utils";
 import { auth, signOut } from "@/auth";
 
 const STATIC_HOME = "temp_hardcoded_home";
 
-interface HomePageProps {
-  searchParams: SearchParamsPromise;
-}
-
-export default async function Home({ searchParams }: HomePageProps) {
-  const resolvedParams = await searchParams;
-  const queryString = new URLSearchParams(
-    resolvedParams as Record<string, string>,
-  ).toString();
+export default async function Home() {
   const homeMates = await listHomeMates(STATIC_HOME);
+  const mate = await getMateProfile();
 
   const session = await auth();
 
@@ -35,8 +27,11 @@ export default async function Home({ searchParams }: HomePageProps) {
         <thead>
           <tr key="header" className="text-lg">
             <th>Time</th>
-            <th>{homeMates.raw[0].name}</th>
-            <th>{homeMates.raw[1].name}</th>
+            {homeMates.raw.map((homeMate) => (
+              <th key={`th-${homeMate.email}`}>
+                {homeMate.email === mate.email ? mate.name : homeMate.name}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -62,9 +57,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </tbody>
       </table>
       <footer className="flex flex-col gap-2 mx-2">
-        <p className="text-xl">
-          Hi, I'm {session?.user?.name || session?.user?.email}
-        </p>
+        <p className="text-xl">Hi, I'm {mate.name}</p>
         <p className="text-3xl font-bold text-center">Do you have a meeting?</p>
         <p>
           Not you?{" "}

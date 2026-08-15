@@ -7,8 +7,10 @@ import {
   deleteEntry,
   fetchListEntries,
   fetchListHomeMates,
+  fetchMateProfile,
   requestOtp,
   updateEntry,
+  updateMateProfile,
 } from "@/api";
 import { rows, startIndexMap } from "@/constants";
 import { convertTimeToUTCISO, convertToLocalTime } from "@/utils";
@@ -18,6 +20,12 @@ import { UnauthorizedError } from "@/api/types";
 export type FormState = {
   step: "REQUEST_OTP" | "VERIFY_OTP";
   email: string;
+  error?: string;
+  success?: boolean;
+};
+
+export type MateProfileState = {
+  name: string;
   error?: string;
   success?: boolean;
 };
@@ -71,7 +79,36 @@ export async function listEntries(
   return currentRows;
 }
 
-export async function saveOptions(formData: FormData) {}
+export async function getMateProfile() {
+  return fetchMateProfile();
+}
+
+export async function saveMateProfile(
+  prevState: MateProfileState,
+  formData: FormData,
+) {
+  const nameFormValue = formData.get("name");
+
+  if (!nameFormValue) {
+    return { ...prevState, error: "Name is required." };
+  }
+
+  const name = nameFormValue.toString();
+  try {
+    await updateMateProfile(name);
+    return {
+      ...prevState,
+      name,
+      error: undefined,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      ...prevState,
+      error: "Failed to update Profile. Please try again.",
+    };
+  }
+}
 
 export async function getOtp(
   prevState: FormState,
@@ -85,7 +122,7 @@ export async function getOtp(
       return { ...prevState, error: "Please enter a valid email address." };
     }
     try {
-      await requestOtp(email.toString());
+      await requestOtp(email);
       return {
         step: "VERIFY_OTP",
         email,
