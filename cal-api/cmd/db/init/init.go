@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,9 +11,14 @@ import (
 )
 
 func main() {
+	force := flag.Bool("force", false, "Force re-init of DB. WARNING!!! This drops the databases.")
+	flag.Parse()
+
 	if _, err := os.Stat("data/app.db"); err == nil {
-		log.Println("SQLite db already exists. Skipping init.")
-		os.Exit(0)
+		if !*force {
+			log.Println("SQLite db already exists. Skipping init.")
+			os.Exit(0)
+		}
 	}
 
 	db, err := sql.Open("sqlite", "data/app.db?_time_format=sqlite")
@@ -27,6 +33,12 @@ func main() {
 	if _, err := db.Exec(`PRAGMA foreign_keys=ON;`); err != nil {
 		log.Fatalf("Failed to enable Foreign Keys: %v", err)
 	}
+
+	_, err = db.Exec(`DROP TABLE IF EXISTS homemates;`)
+	if err != nil {
+		log.Fatalf("Failed to DROP users table: %v", err)
+	}
+	fmt.Println("Table homemates dropped successfully.")
 
 	_, err = db.Exec(`DROP TABLE IF EXISTS entries;`)
 	if err != nil {
@@ -52,12 +64,6 @@ func main() {
 	}
 	fmt.Println("Table homes dropped successfully.")
 
-	_, err = db.Exec(`DROP TABLE IF EXISTS homemates;`)
-	if err != nil {
-		log.Fatalf("Failed to DROP users table: %v", err)
-	}
-	fmt.Println("Table homemates dropped successfully.")
-
 	usersSchema := `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +78,7 @@ func main() {
 	entriesSchema := `
 	CREATE TABLE IF NOT EXISTS entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER REFERENCES users(id),
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
 		value INTEGER NOT NULL DEFAULT 0 CHECK(value IN(0, 1, 2, 3)),
 		start DATETIME,
 		end DATETIME,
@@ -95,6 +101,7 @@ func main() {
 	CREATE TABLE IF NOT EXISTS homes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
+		slug TEXT NOT NULL UNIQUE,
 		description TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -105,9 +112,11 @@ func main() {
 	homeMatesSchema := `
 	CREATE TABLE IF NOT EXISTS homemates (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		home_id INTEGER REFERENCES homes(id),
-		mate_id INTEGER REFERENCES users(id),
-		role INTEGER NOT NULL DEFAULT 0 CHECK(value IN(0, 1)),
+		home_id INTEGER REFERENCES homes(id) ON DELETE CASCADE,
+		mate_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		role INTEGER NOT NULL DEFAULT 0 CHECK(role IN(0, 1)),
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 	if _, err := db.Exec(homeMatesSchema); err != nil {
 		log.Fatalf("Failed to create table: %v", err)

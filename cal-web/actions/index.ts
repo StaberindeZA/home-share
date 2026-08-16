@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createEntry,
+  createHome,
+  createHomeMate,
   deleteEntry,
+  deleteHomeMate,
+  fetchHome,
   fetchListEntries,
   fetchListHomeMates,
+  fetchListHomes,
   fetchMateProfile,
   requestOtp,
   updateEntry,
   updateMateProfile,
+  verifyMateRole,
 } from "@/api";
 import { rows, startIndexMap } from "@/constants";
 import { convertTimeToUTCISO, convertToLocalTime } from "@/utils";
@@ -30,6 +36,20 @@ export type MateProfileState = {
   success?: boolean;
 };
 
+export type CreateHomeState = {
+  name: string;
+  description: string;
+  error?: string;
+};
+
+export type CreateHomeMateState = {
+  slug: string;
+  email: string;
+  name: string;
+  error?: string;
+  success?: boolean;
+};
+
 export async function addEntry(startTime: string, endTime: string) {
   const startDateString = convertTimeToUTCISO(startTime);
   const endDateString = convertTimeToUTCISO(endTime);
@@ -39,7 +59,6 @@ export async function addEntry(startTime: string, endTime: string) {
 }
 
 export async function changeEntry(entryId: number, entryValue: number) {
-  console.log({ entryId, entryValue });
   await updateEntry(entryId, entryValue);
 
   revalidatePath("/");
@@ -56,10 +75,9 @@ export async function listEntries(
   timeZone: string,
 ) {
   const currentRows = structuredClone(rows);
-  const entries = await Promise.all([
-    fetchListEntries(workspaceUserIds[0]),
-    fetchListEntries(workspaceUserIds[1]),
-  ]);
+  const entries = await Promise.all(
+    workspaceUserIds.map((ws) => fetchListEntries(ws)),
+  );
 
   entries.forEach((entry, userIndex) => {
     entry.forEach((e: any) => {
@@ -170,7 +188,7 @@ export async function submitOtp(
 export async function listHomeMates(homeSlug: string) {
   try {
     const matesRaw = await fetchListHomeMates(homeSlug);
-    const matesIDs = matesRaw.map((mate) => parseInt(mate.id));
+    const matesIDs = matesRaw.map((mate) => mate.id);
     const matesEmails = matesRaw.map((mate) => mate.email);
 
     return {
@@ -184,5 +202,98 @@ export async function listHomeMates(homeSlug: string) {
     }
 
     throw error;
+  }
+}
+
+export async function listHomes() {
+  return fetchListHomes();
+}
+
+export async function readHome(slug: string) {
+  return fetchHome(slug);
+}
+
+export async function addHome(prevState: CreateHomeState, formData: FormData) {
+  const nameFormValue = formData.get("name");
+  if (!nameFormValue) {
+    return { ...prevState, error: "Name is required." };
+  }
+  const name = nameFormValue.toString();
+
+  const descriptionFormValue = formData.get("description");
+  const description = descriptionFormValue
+    ? descriptionFormValue.toString()
+    : "";
+
+  try {
+    await createHome(name, description);
+  } catch (error) {
+    console.error(error);
+    return {
+      ...prevState,
+      name,
+      description,
+      error: "An error occurred. Please try again.",
+    };
+  }
+
+  redirect("/home/select");
+}
+
+export async function addHomeMate(
+  prevState: CreateHomeMateState,
+  formData: FormData,
+) {
+  const slugFormValue = formData.get("slug");
+  if (!slugFormValue) {
+    return { ...prevState, error: "Slug is required." };
+  }
+  const slug = slugFormValue.toString();
+  const emailFormValue = formData.get("email");
+  if (!emailFormValue) {
+    return { ...prevState, error: "Email is required." };
+  }
+  const email = emailFormValue.toString();
+  const nameFormValue = formData.get("name");
+  if (!nameFormValue) {
+    return { ...prevState, error: "Name is required." };
+  }
+  const name = nameFormValue.toString();
+
+  try {
+    await createHomeMate(slug, name, email);
+  } catch (error) {
+    console.error(error);
+    return {
+      ...prevState,
+      email,
+      name,
+      error: "An error occurred. Please try again.",
+    };
+  }
+
+  revalidatePath("/home/[slug]/manage");
+
+  return {
+    ...prevState,
+    email: "",
+    name: "",
+    error: undefined,
+    success: true,
+  };
+}
+
+export async function removeHomeMate(homeSlug: string, mateEmail: string) {
+  await deleteHomeMate(homeSlug, mateEmail);
+
+  revalidatePath("/home/[slug]/manage");
+}
+
+export async function verifyMateAdmin(homeSlug: string) {
+  try {
+    await verifyMateRole(homeSlug, "Admin");
+    return true;
+  } catch (error) {
+    return false;
   }
 }

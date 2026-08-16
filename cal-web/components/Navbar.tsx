@@ -1,19 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
+import { verifyMateRole } from "@/api";
+
+const defaultNavLinks = [
+  { name: "About", href: "/about" },
+  { name: "Profile", href: "/profile" },
+];
+
+type NavbarParams = {
+  slug?: string;
+};
 
 // Example Navbar component structure with links and state for mobile menu
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
+  const params = useParams<NavbarParams>();
 
-  const navLinks = [
-    { name: "Calendar", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Profile", href: "/profile" },
-  ];
+  useEffect(() => {
+    if (!params?.slug) {
+      return;
+    }
+
+    const checkAdmin = async (slug: string) => {
+      try {
+        await verifyMateRole(slug, "Admin");
+        setIsAdmin(true);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdmin(params.slug);
+  }, []);
+
+  const navLinks = [];
+
+  if (params.slug) {
+    if (isAdmin) {
+      navLinks.push({
+        name: "Manage Home",
+        href: `/home/${params.slug}/manage`,
+      });
+    }
+    navLinks.push({ name: "Calendar", href: `/home/${params.slug}` });
+  } else {
+    navLinks.push({ name: "Select Home", href: `/home/select` });
+  }
+
+  defaultNavLinks.forEach((link) => navLinks.push(link));
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/80">

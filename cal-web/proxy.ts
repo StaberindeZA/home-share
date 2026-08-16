@@ -8,5 +8,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/", "/profile"],
+  matcher: ["/", "/profile", "/home/:path*"],
 };

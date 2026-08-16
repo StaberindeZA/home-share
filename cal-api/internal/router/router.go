@@ -10,6 +10,7 @@ import (
 	"cal-api/internal/entry"
 	"cal-api/internal/googleauth"
 	"cal-api/internal/home"
+	"cal-api/internal/homemate"
 	"cal-api/internal/middleware"
 	"cal-api/internal/otp"
 	"cal-api/internal/user"
@@ -21,6 +22,8 @@ func New(db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 
 	userLogic := user.NewLiteLogic(db)
+	homeMateLogic := homemate.NewLiteLogic(db)
+	homeLogic := home.NewLiteLogic(db, userLogic)
 
 	emailMessages := email.NewGomailMessages()
 	emailSender := email.NewGomailSender(emailMessages)
@@ -35,8 +38,9 @@ func New(db *sql.DB) http.Handler {
 	mux.HandleFunc("POST /v1/auth/google", googleAuthController.VerifyIdToken)
 
 	authMiddleware := auth.NewAuthMiddleware(userLogic)
-	authController := auth.NewAuthController(userLogic)
+	authController := auth.NewAuthController(userLogic, homeLogic, homeMateLogic)
 	mux.Handle("GET /v1/auth/userinfo", authMiddleware.Protected(http.HandlerFunc(authController.UserInfo)))
+	mux.Handle("POST /v1/auth/role/verify", authMiddleware.Protected(http.HandlerFunc(authController.VerifyRole)))
 
 	entryLogic := entry.NewMVPLogic(db)
 	entryController := entry.NewEntryController(entryLogic)
@@ -50,9 +54,14 @@ func New(db *sql.DB) http.Handler {
 	mux.Handle("GET /v1/user", authMiddleware.Protected(http.HandlerFunc(userController.ReadLoggedInUser)))
 	mux.Handle("PUT /v1/user", authMiddleware.Protected(http.HandlerFunc(userController.UpdateLoggedInUser)))
 
-	homeLogic := home.NewStaticLogic(userLogic)
-	homeController := home.NewHomeController(homeLogic)
-	mux.Handle("GET /v1/home/{slug}/mates", authMiddleware.Protected(http.HandlerFunc(homeController.ListHomeMates)))
+	homeController := home.NewHomeController(homeLogic, homeMateLogic, userLogic)
+	mux.Handle("POST /v1/home", authMiddleware.Protected(http.HandlerFunc(homeController.Create)))
+	mux.Handle("GET /v1/home/{slug}", authMiddleware.Protected(http.HandlerFunc(homeController.Read)))
+	mux.Handle("DELETE /v1/home/{slug}", authMiddleware.Protected(http.HandlerFunc(homeController.Delete)))
+	mux.Handle("GET /v1/homes", authMiddleware.Protected(http.HandlerFunc(homeController.List)))
+	mux.Handle("POST /v1/home/{slug}/mate", authMiddleware.Protected(http.HandlerFunc(homeController.CreateHomeMate)))
+	mux.Handle("DELETE /v1/home/{slug}/mate", authMiddleware.Protected(http.HandlerFunc(homeController.DeleteHomeMate)))
+	mux.Handle("GET /v1/home/{slug}/mates", authMiddleware.Protected(http.HandlerFunc(homeController.ReadHomeMates)))
 
 	return middleware.Logger(mux)
 }
