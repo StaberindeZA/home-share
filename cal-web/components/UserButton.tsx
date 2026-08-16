@@ -14,15 +14,13 @@ interface UserButtonProps {
   rowEntry?: RowEntry;
 }
 
-const valueMapper = ["open", "BOOKED", "Talking", "Not Talking"];
+const valueMapper = ["open", "Talking", "Not Talking"];
 
 function getButtonColor(entryValue: number) {
   switch (entryValue) {
     case 1:
-      return "bg-amber-300 dark:bg-amber-700";
-    case 2:
       return "bg-red-300 dark:bg-red-700";
-    case 3:
+    case 2:
       return "bg-sky-300 dark:bg-sky-700";
     case 0:
     default:
@@ -49,10 +47,14 @@ export default function UserButton({
       if (!entryId) {
         setLoading(true);
         await addEntry(startTime, endTime);
-      } else if (entryValue >= 0 && entryValue < 3 && entryId) {
+      } else if (
+        entryValue >= 0 &&
+        entryValue < valueMapper.length - 1 &&
+        entryId
+      ) {
         setLoading(true);
         await changeEntry(entryId, entryValue + 1);
-      } else if (entryValue === 3 && entryId) {
+      } else if (entryValue === valueMapper.length - 1 && entryId) {
         setLoading(true);
         await changeEntry(entryId, 0);
       } else {

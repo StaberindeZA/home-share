@@ -43,7 +43,6 @@ func ParseAndValidateJWT(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		log.Println(claims["email"], claims["nbf"])
 		return claims, nil
 	} else {
 		log.Println(err)

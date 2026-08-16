@@ -46,6 +46,18 @@ func main() {
 	}
 	fmt.Println("Table otps dropped successfully.")
 
+	_, err = db.Exec(`DROP TABLE IF EXISTS homes;`)
+	if err != nil {
+		log.Fatalf("Failed to DROP users table: %v", err)
+	}
+	fmt.Println("Table homes dropped successfully.")
+
+	_, err = db.Exec(`DROP TABLE IF EXISTS homemates;`)
+	if err != nil {
+		log.Fatalf("Failed to DROP users table: %v", err)
+	}
+	fmt.Println("Table homemates dropped successfully.")
+
 	usersSchema := `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,6 +89,27 @@ func main() {
 		expires_at DATETIME
 	);`
 	if _, err := db.Exec(otpsSchema); err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	homesSchema := `
+	CREATE TABLE IF NOT EXISTS homes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		description TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err := db.Exec(homesSchema); err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	homeMatesSchema := `
+	CREATE TABLE IF NOT EXISTS homemates (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		home_id INTEGER REFERENCES homes(id),
+		mate_id INTEGER REFERENCES users(id),
+		role INTEGER NOT NULL DEFAULT 0 CHECK(value IN(0, 1)),
+	);`
+	if _, err := db.Exec(homeMatesSchema); err != nil {
 		log.Fatalf("Failed to create table: %v", err)
 	}
 	fmt.Println("Table verified successfully.")

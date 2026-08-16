@@ -3,7 +3,6 @@ package entry
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -43,8 +42,6 @@ func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("From Create", user.Id)
-
 	message, err := c.logic.Create(user.Id, createEntry.Start, createEntry.End)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -83,7 +80,7 @@ func (c EntryController) Read(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(data)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -200,7 +197,7 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(data)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -216,8 +213,6 @@ func (c EntryController) VerifyUserForEntity(entryID int, r *http.Request) error
 	if err != nil {
 		return err
 	}
-
-	log.Print(entry.userId, user.Id)
 
 	if entry.userId != user.Id {
 		return errors.New("user does not match entity user")

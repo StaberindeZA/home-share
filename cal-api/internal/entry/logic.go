@@ -21,7 +21,7 @@ func (dl DummyLogic) Read(id int) (Entry, error) {
 	return Entry{
 		id:     id,
 		userId: 999,
-		value:  Booked,
+		value:  Talking,
 		start:  time.Now(),
 		end:    time.Now(),
 	}, nil
@@ -68,7 +68,7 @@ type MVPLogic struct {
 
 func (ml MVPLogic) Create(userId int, start, end time.Time) (string, error) {
 	insertEntriesQuery := `INSERT INTO entries (user_id, value, start, end) VALUES (?, ?, ?, ?);`
-	if _, err := ml.db.Exec(insertEntriesQuery, userId, Booked, start, end); err != nil {
+	if _, err := ml.db.Exec(insertEntriesQuery, userId, Talking, start, end); err != nil {
 		return "error", err
 	}
 

@@ -39,6 +39,7 @@ export async function addEntry(startTime: string, endTime: string) {
 }
 
 export async function changeEntry(entryId: number, entryValue: number) {
+  console.log({ entryId, entryValue });
   await updateEntry(entryId, entryValue);
 
   revalidatePath("/");

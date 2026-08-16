@@ -5,22 +5,19 @@ import (
 	"fmt"
 )
 
-// Role represents the user role enum
+// EntryValue represents the user role enum
 type EntryValue int
 
 // Define the enum values
 const (
 	Open       EntryValue = iota // 0 (Catch-all/default)
-	Booked                       // 1
-	Talking                      // 2
-	NotTalking                   // 3
+	Talking                      // 1
+	NotTalking                   // 1
 )
 
 // String implements the fmt.Stringer interface for clean logging/printing
 func (ev EntryValue) String() string {
 	switch ev {
-	case Booked:
-		return "Booked"
 	case Talking:
 		return "Talking"
 	case NotTalking:
