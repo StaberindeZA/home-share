@@ -15,11 +15,22 @@ import (
 	"cal-api/internal/otp"
 	"cal-api/internal/user"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	_ "modernc.org/sqlite"
 )
 
 func New(db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
+
+	promReg := prometheus.NewRegistry()
+	promReg.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector((collectors.ProcessCollectorOpts{})),
+	)
+
+	httpMetrics := middleware.NewHTTPMetrics(promReg)
 
 	userLogic := user.NewLiteLogic(db)
 	homeMateLogic := homemate.NewLiteLogic(db)
@@ -63,5 +74,7 @@ func New(db *sql.DB) http.Handler {
 	mux.Handle("DELETE /v1/home/{slug}/mate", authMiddleware.Protected(http.HandlerFunc(homeController.DeleteHomeMate)))
 	mux.Handle("GET /v1/home/{slug}/mates", authMiddleware.Protected(http.HandlerFunc(homeController.ReadHomeMates)))
 
-	return middleware.Logger(mux)
+	mux.Handle("/metrics", promhttp.HandlerFor(promReg, promhttp.HandlerOpts{}))
+
+	return middleware.Logger(httpMetrics.Middleware(mux))
 }
