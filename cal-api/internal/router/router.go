@@ -9,6 +9,7 @@ import (
 	"cal-api/internal/email"
 	"cal-api/internal/entry"
 	"cal-api/internal/googleauth"
+	"cal-api/internal/healthcheck"
 	"cal-api/internal/home"
 	"cal-api/internal/homemate"
 	"cal-api/internal/middleware"
@@ -34,26 +35,30 @@ func New(db *sql.DB) http.Handler {
 
 	userLogic := user.NewLiteLogic(db)
 	homeMateLogic := homemate.NewLiteLogic(db)
+	entryLogic := entry.NewMVPLogic(db)
 	homeLogic := home.NewLiteLogic(db, userLogic)
+	otpLogic := otp.NewLiteOtp(db, userLogic)
+	googleAuthLogic := googleauth.NewSimpleGALogic(db, userLogic)
+	authMiddleware := auth.NewAuthMiddleware(userLogic)
 
 	emailMessages := email.NewGomailMessages()
 	emailSender := email.NewGomailSender(emailMessages)
 
-	otpLogic := otp.NewLiteOtp(db, userLogic)
+	healthcheckController := healthcheck.NewHealthcheckController(db)
+	mux.HandleFunc("/livez", healthcheckController.Live)
+	mux.HandleFunc("/readyz", healthcheckController.Ready)
+
 	otpController := otp.NewOtpController(otpLogic, emailSender)
 	mux.HandleFunc("POST /v1/otp", otpController.RequestOtp)
 	mux.HandleFunc("POST /v1/otp/verify", otpController.VerifyOtp)
 
-	googleAuthLogic := googleauth.NewSimpleGALogic(db, userLogic)
 	googleAuthController := googleauth.NewGoogleAuthController(googleAuthLogic)
 	mux.HandleFunc("POST /v1/auth/google", googleAuthController.VerifyIdToken)
 
-	authMiddleware := auth.NewAuthMiddleware(userLogic)
 	authController := auth.NewAuthController(userLogic, homeLogic, homeMateLogic)
 	mux.Handle("GET /v1/auth/userinfo", authMiddleware.Protected(http.HandlerFunc(authController.UserInfo)))
 	mux.Handle("POST /v1/auth/role/verify", authMiddleware.Protected(http.HandlerFunc(authController.VerifyRole)))
 
-	entryLogic := entry.NewMVPLogic(db)
 	entryController := entry.NewEntryController(entryLogic)
 	mux.Handle("POST /v1/entry", authMiddleware.Protected(http.HandlerFunc(entryController.Create)))
 	mux.Handle("/v1/entry/{id}", authMiddleware.Protected(http.HandlerFunc(entryController.Read)))
