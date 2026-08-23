@@ -1,5 +1,5 @@
 package googleauth
 
 type GoogleAuthLogic interface {
-	ValidateIdToken(idToken string) (string, error)
+	ValidateIDToken(idToken string) (string, error)
 }

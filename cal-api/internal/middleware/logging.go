@@ -2,12 +2,14 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 )
 
 func Logger(next http.Handler) http.Handler {
+	debugOnlyPaths := []string{"/metrics", "/livez", "/readyz"}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -15,6 +17,10 @@ func Logger(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rwd, r)
 
-		log.Printf("%s %s completed in %v with %d", r.Method, r.URL.Path, time.Since(start), rwd.statusCode)
+		if slices.Contains(debugOnlyPaths, r.URL.Path) {
+			slog.Debug("request completed", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start), "statusCode", rwd.statusCode)
+		} else {
+			slog.Info("request completed", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start), "statusCode", rwd.statusCode)
+		}
 	})
 }

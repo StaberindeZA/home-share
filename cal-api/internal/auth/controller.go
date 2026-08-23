@@ -2,13 +2,12 @@
 package auth
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"cal-api/internal/home"
 	"cal-api/internal/homemate"
 	"cal-api/internal/user"
+	"cal-api/internal/utils"
 )
 
 type AuthController struct {
@@ -26,9 +25,8 @@ func NewAuthController(userLogic user.UserLogic, homeLogic home.HomeLogic, homem
 }
 
 func (ac AuthController) UserInfo(w http.ResponseWriter, r *http.Request) {
-	user, ok := r.Context().Value("user").(user.User)
+	user, ok := user.RetrieveUserFromContext(w, r)
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -36,18 +34,12 @@ func (ac AuthController) UserInfo(w http.ResponseWriter, r *http.Request) {
 		Email: user.Email,
 		Name:  user.Name,
 	}
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+
+	utils.SendPayloadJSON(w, data)
 }
 
 func (ac AuthController) VerifyRole(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
 
@@ -56,26 +48,20 @@ func (ac AuthController) VerifyRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload VerifyRoleDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&payload)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	payload, ok := utils.DecodeBodyJSON[VerifyRoleDTO](w, r)
+	if !ok {
 		return
 	}
 
 	h, err := ac.homeLogic.Read(payload.HomeSlug)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "VerifyRole.Read")
 		return
 	}
 
 	hm, err := ac.homemateLogic.ReadForHomeAndMate(h.ID, u.Id)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "VerifyRole.ReadForHomeAndMate")
 		return
 	}
 

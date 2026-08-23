@@ -1,38 +1,31 @@
+// Package googleauth handles google auth to internal jwt conversion
 package googleauth
 
 import (
-	"cal-api/internal/utils"
-
-	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
+
+	"cal-api/internal/utils"
 )
 
 type GoogleAuthController struct {
 	logic GoogleAuthLogic
 }
 
-func (c GoogleAuthController) VerifyIdToken(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+func (c GoogleAuthController) VerifyIDToken(w http.ResponseWriter, r *http.Request) {
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
 
-	var requestData VerifyIdTokenDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&requestData)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	requestData, ok := utils.DecodeBodyJSON[VerifyIDTokenDTO](w, r)
+	if !ok {
 		return
 	}
 
-	email, err := c.logic.ValidateIdToken(requestData.IdToken)
+	email, err := c.logic.ValidateIDToken(requestData.IDToken)
 	if err != nil {
 		if errors.Is(err, ErrClientIDNotFound) {
-			log.Println(err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			utils.RecordErrorServer(w, err, "VerifyIDToken.ValidateIDToken")
 		}
 
 		w.WriteHeader(http.StatusBadRequest)
@@ -42,8 +35,7 @@ func (c GoogleAuthController) VerifyIdToken(w http.ResponseWriter, r *http.Reque
 
 	tokenString, err := utils.GenerateBackendJWT(email)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "VerifyIDToken.GenerateBackendJWT")
 		return
 	}
 
@@ -51,13 +43,7 @@ func (c GoogleAuthController) VerifyIdToken(w http.ResponseWriter, r *http.Reque
 		Token: tokenString,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func NewGoogleAuthController(logic GoogleAuthLogic) GoogleAuthController {

@@ -2,8 +2,6 @@
 package otp
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"cal-api/internal/email"
@@ -16,17 +14,12 @@ type OtpController struct {
 }
 
 func (c OtpController) RequestOtp(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
 
-	var requestOtp RequestOtpDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&requestOtp)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	requestOtp, ok := utils.DecodeBodyJSON[RequestOtpDTO](w, r)
+	if !ok {
 		return
 	}
 
@@ -38,7 +31,7 @@ func (c OtpController) RequestOtp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := c.emailSender.SendOtp(requestOtp.Email, otp); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Otp.RequestOtp.SendOtp")
 		return
 	}
 
@@ -46,50 +39,36 @@ func (c OtpController) RequestOtp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c OtpController) VerifyOtp(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
 
-	var verifyOtp VerifyOtpDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&verifyOtp)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	verifyOtp, ok := utils.DecodeBodyJSON[VerifyOtpDTO](w, r)
+	if !ok {
 		return
 	}
 
 	isValid, err := c.logic.VerifyAndConsume(verifyOtp.Email, verifyOtp.Otp)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Otp.VerifyOtp.VerifyAndConsume")
 		return
 	}
 
 	if !isValid {
-		http.Error(w, "Invalid OTP code", http.StatusBadRequest)
+		utils.RecordErrorServer(w, err, "Otp.VerifyOtp.isValid")
 		return
 	}
 
-	// Issue custom backend token
 	tokenString, err := utils.GenerateBackendJWT(verifyOtp.Email)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Otp.VerifyOtp.GenerateBackendJWT")
 		return
 	}
 	data := OtpTokenDTO{
 		Token: tokenString,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func NewOtpController(logic OtpLogic, emailSender email.GomailSender) OtpController {

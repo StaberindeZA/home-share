@@ -53,7 +53,7 @@ func New(db *sql.DB) http.Handler {
 	mux.HandleFunc("POST /v1/otp/verify", otpController.VerifyOtp)
 
 	googleAuthController := googleauth.NewGoogleAuthController(googleAuthLogic)
-	mux.HandleFunc("POST /v1/auth/google", googleAuthController.VerifyIdToken)
+	mux.HandleFunc("POST /v1/auth/google", googleAuthController.VerifyIDToken)
 
 	authController := auth.NewAuthController(userLogic, homeLogic, homeMateLogic)
 	mux.Handle("GET /v1/auth/userinfo", authMiddleware.Protected(http.HandlerFunc(authController.UserInfo)))

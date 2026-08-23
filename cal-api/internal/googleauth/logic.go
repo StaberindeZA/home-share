@@ -1,18 +1,18 @@
 package googleauth
 
 import (
-	"cal-api/internal/user"
-
 	"context"
 	"database/sql"
 	"errors"
 	"os"
 	"unicode/utf8"
 
+	"cal-api/internal/user"
+
 	"google.golang.org/api/idtoken"
 )
 
-var ErrClientIDNotFound = errors.New("Google Client ID env var was not found.")
+var ErrClientIDNotFound = errors.New("google client id env var was not found")
 
 func getGoogleClientID() (string, error) {
 	secret := os.Getenv("GOOGLE_CLIENT_ID")
@@ -27,14 +27,13 @@ type SimpleGALogic struct {
 	userLogic user.UserLogic
 }
 
-func (gal SimpleGALogic) ValidateIdToken(idToken string) (string, error) {
-	clientId, err := getGoogleClientID()
+func (gal SimpleGALogic) ValidateIDToken(idToken string) (string, error) {
+	clientID, err := getGoogleClientID()
 	if err != nil {
 		return "", err
 	}
-	payload, err := idtoken.Validate(context.Background(), idToken, clientId)
+	payload, err := idtoken.Validate(context.Background(), idToken, clientID)
 	if err != nil {
-		//http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return "", err
 	}
 
@@ -48,7 +47,6 @@ func (gal SimpleGALogic) ValidateIdToken(idToken string) (string, error) {
 		return "", err
 	}
 
-	// Issue custom backend token
 	return email, nil
 }
 

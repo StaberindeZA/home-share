@@ -1,7 +1,7 @@
 package googleauth
 
-type VerifyIdTokenDTO struct {
-	IdToken string `json:"idToken"`
+type VerifyIDTokenDTO struct {
+	IDToken string `json:"idToken"`
 }
 
 type GoogleAuthTokenDTO struct {

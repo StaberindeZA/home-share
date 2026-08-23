@@ -4,9 +4,10 @@ package healthcheck
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"net/http"
 	"time"
+
+	"cal-api/internal/utils"
 )
 
 type HealthcheckController struct {
@@ -20,17 +21,15 @@ func NewHealthcheckController(db *sql.DB) HealthcheckController {
 }
 
 func (c HealthcheckController) Live(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(HealthResponse{
+	data := HealthResponse{
 		Status:    "UP",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
-	})
+	}
+
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c HealthcheckController) Ready(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
@@ -57,5 +56,5 @@ func (c HealthcheckController) Ready(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	json.NewEncoder(w).Encode(response)
+	utils.SendPayloadJSON(w, response)
 }

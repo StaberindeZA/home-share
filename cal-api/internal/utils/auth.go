@@ -2,9 +2,7 @@
 package utils
 
 import (
-	"errors"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
@@ -48,14 +46,4 @@ func ParseAndValidateJWT(tokenString string) (jwt.MapClaims, error) {
 		log.Println(err)
 		return jwt.MapClaims{}, err
 	}
-}
-
-func GetLoggedInUser[T any](r *http.Request) (T, error) {
-	var user T
-	user, ok := r.Context().Value("user").(T)
-	if !ok {
-		return user, errors.New("user not in context")
-	}
-
-	return user, nil
 }

@@ -1,8 +1,6 @@
 package user
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"cal-api/internal/utils"
@@ -19,10 +17,8 @@ func NewUserController(logic UserLogic) UserController {
 }
 
 func (c UserController) ReadLoggedInUser(w http.ResponseWriter, r *http.Request) {
-	user, err := utils.GetLoggedInUser[User](r)
-	if err != nil {
-		log.Printf("Error in GetLoggedInUser: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	user, ok := RetrieveUserFromContext(w, r)
+	if !ok {
 		return
 	}
 
@@ -30,12 +26,7 @@ func (c UserController) ReadLoggedInUser(w http.ResponseWriter, r *http.Request)
 		Name:  user.Name,
 		Email: user.Email,
 	}
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c UserController) UpdateLoggedInUser(w http.ResponseWriter, r *http.Request) {
@@ -44,25 +35,18 @@ func (c UserController) UpdateLoggedInUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, err := utils.GetLoggedInUser[User](r)
-	if err != nil {
-		log.Printf("Error in GetLoggedInUser: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	user, ok := RetrieveUserFromContext(w, r)
+	if !ok {
 		return
 	}
 
-	var updateUser UpdateUserDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&updateUser)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	updateUser, ok := utils.DecodeBodyJSON[UpdateUserDTO](w, r)
+	if !ok {
 		return
 	}
 
 	message, err := c.logic.UpdateByEmail(user.Email, updateUser.Name)
 	if err != nil {
-		log.Printf("Error in update user logic: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

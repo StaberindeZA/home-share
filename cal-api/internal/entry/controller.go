@@ -1,7 +1,6 @@
 package entry
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"cal-api/internal/user"
+	"cal-api/internal/utils"
 )
 
 type EntryController struct {
@@ -22,23 +22,17 @@ func NewEntryController(logic EntryLogic) EntryController {
 }
 
 func (c EntryController) Create(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
-		return
-	}
-
-	user, ok := r.Context().Value("user").(user.User)
+	ok := utils.CheckContentTypeJSON(w, r)
 	if !ok {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	user, ok := user.RetrieveUserFromContext(w, r)
+	if !ok {
 		return
 	}
 
-	var createEntry CreateEntryDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&createEntry)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	createEntry, ok := utils.DecodeBodyJSON[CreateEntryDTO](w, r)
+	if !ok {
 		return
 	}
 
@@ -77,18 +71,12 @@ func (c EntryController) Read(w http.ResponseWriter, r *http.Request) {
 		Start:  entry.start.String(),
 		End:    entry.end.String(),
 	}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	ok := utils.CheckContentTypeJSON(w, r)
+	if !ok {
 		return
 	}
 
@@ -104,12 +92,8 @@ func (c EntryController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updateEntry UpdateEntryDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&updateEntry)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	updateEntry, ok := utils.DecodeBodyJSON[UpdateEntryDTO](w, r)
+	if !ok {
 		return
 	}
 
@@ -145,11 +129,11 @@ func (c EntryController) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
-	userIdString := r.URL.Query().Get("userId")
-	if userIdString == "" {
+	userIDString := r.URL.Query().Get("userId")
+	if userIDString == "" {
 		http.Error(w, "Missing userId query param", http.StatusBadRequest)
 	}
-	userId, err := strconv.Atoi(userIdString)
+	userID, err := strconv.Atoi(userIDString)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
@@ -177,7 +161,7 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	entries, err := c.logic.List(userId, startTime, endTime)
+	entries, err := c.logic.List(userID, startTime, endTime)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -194,13 +178,8 @@ func (c EntryController) List(w http.ResponseWriter, r *http.Request) {
 			End:    entry.end.String(),
 		})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c EntryController) VerifyUserForEntity(entryID int, r *http.Request) error {

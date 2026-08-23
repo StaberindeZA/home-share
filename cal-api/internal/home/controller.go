@@ -2,13 +2,12 @@ package home
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"cal-api/internal/homemate"
 	"cal-api/internal/user"
+	"cal-api/internal/utils"
 )
 
 type HomeController struct {
@@ -26,23 +25,17 @@ func NewHomeController(logic HomeLogic, homeMateLogic homemate.HomeMateLogic, us
 }
 
 func (c HomeController) Create(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
 
-	currentUser, ok := r.Context().Value("user").(user.User)
+	currentUser, ok := user.RetrieveUserFromContext(w, r)
 	if !ok {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	var createHome HomeCreateDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&createHome)
-	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+	createHome, ok := utils.DecodeBodyJSON[HomeCreateDTO](w, r)
+	if !ok {
 		return
 	}
 
@@ -55,15 +48,13 @@ func (c HomeController) Create(w http.ResponseWriter, r *http.Request) {
 
 	home, err := c.logic.Read(slug)
 	if err != nil {
-		log.Printf("Could not find home with slug: %s\n%v", slug, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "HomeController.Create.Read")
 		return
 	}
 
 	err = c.homeMateLogic.Create(home.ID, currentUser.Id, homemate.Admin)
 	if err != nil {
-		log.Printf("Could not create home mate: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "HomeController.Create.Create")
 		return
 	}
 	w.Write([]byte("ok"))
@@ -73,11 +64,12 @@ func (c HomeController) Read(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if slug == "" {
 		http.Error(w, "Missing slug path param", http.StatusBadRequest)
+		return
 	}
 	home, err := c.logic.Read(slug)
 	if err != nil {
-		log.Println("Error during Read", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "HomeController.Read.Read")
+		return
 	}
 
 	data := HomeDTO{
@@ -86,19 +78,12 @@ func (c HomeController) Read(w http.ResponseWriter, r *http.Request) {
 		Description: home.description,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c HomeController) List(w http.ResponseWriter, r *http.Request) {
-	currentUser, ok := r.Context().Value("user").(user.User)
+	currentUser, ok := user.RetrieveUserFromContext(w, r)
 	if !ok {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -118,32 +103,25 @@ func (c HomeController) List(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c HomeController) Delete(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if slug == "" {
 		http.Error(w, "Missing slug path param", http.StatusBadRequest)
+		return
 	}
 
-	_, _, err := c.VerifyUserForAdminAction(slug, r)
+	_, _, err := c.VerifyUserForAdminAction(slug, w, r)
 	if err != nil {
-		log.Printf("Error during Authorization: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.Delete.VerifyUserForAdminAction")
 		return
 	}
 
 	err = c.logic.Delete(slug)
 	if err != nil {
-		log.Printf("Error during Delete: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.Delete.Delete")
 		return
 	}
 
@@ -154,12 +132,12 @@ func (c HomeController) ReadHomeMates(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if slug == "" {
 		http.Error(w, "Missing slug path param", http.StatusBadRequest)
+		return
 	}
 
 	mates, err := c.logic.ReadMates(slug)
 	if err != nil {
-		log.Println("Error during RetrieveMates", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.ReadHomeMates.ReadMates")
 	}
 
 	var data []HomeMatesDTO
@@ -171,52 +149,39 @@ func (c HomeController) ReadHomeMates(w http.ResponseWriter, r *http.Request) {
 			Role:  mate.Role.String(),
 		})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println("Error while encoding HomeMatesDTO", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	utils.SendPayloadJSON(w, data)
 }
 
 func (c HomeController) CreateHomeMate(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+	if ok := utils.CheckContentTypeJSON(w, r); !ok {
 		return
 	}
-
 	slug := r.PathValue("slug")
 	if slug == "" {
 		http.Error(w, "Missing slug path param", http.StatusBadRequest)
-	}
-
-	_, h, err := c.VerifyUserForAdminAction(slug, r)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
-	var createHomeMates CreateHomeMatesDTO
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&createHomeMates)
+	_, h, err := c.VerifyUserForAdminAction(slug, w, r)
 	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		utils.RecordErrorServer(w, err, "Home.CreateHomeMates.VerifyUserForAdminAction")
+		return
+	}
+
+	createHomeMates, ok := utils.DecodeBodyJSON[CreateHomeMatesDTO](w, r)
+	if !ok {
 		return
 	}
 
 	u, err := c.userLogic.FindOrCreate(0, createHomeMates.Name, createHomeMates.Email)
 	if err != nil {
-		log.Printf("Could not find or create mate: %s\n%v", createHomeMates.Email, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.CreateHomeMates.FindOrCreate")
 		return
 	}
 
 	err = c.homeMateLogic.Create(h.ID, u.Id, homemate.Mate)
 	if err != nil {
-		log.Printf("Could not find or create home mate: %s\n%v", createHomeMates.Email, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.CreateHomeMates.Create")
 		return
 	}
 
@@ -227,6 +192,7 @@ func (c HomeController) DeleteHomeMate(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if slug == "" {
 		http.Error(w, "Missing slug path param", http.StatusBadRequest)
+		return
 	}
 
 	email := r.URL.Query().Get("email")
@@ -234,7 +200,7 @@ func (c HomeController) DeleteHomeMate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing email query param", http.StatusBadRequest)
 	}
 
-	_, h, err := c.VerifyUserForAdminAction(slug, r)
+	_, h, err := c.VerifyUserForAdminAction(slug, w, r)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
@@ -245,22 +211,20 @@ func (c HomeController) DeleteHomeMate(w http.ResponseWriter, r *http.Request) {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Could not find mate", http.StatusBadRequest)
 		} else {
-			log.Printf("Error finding home mate: %s\n%v", email, err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			utils.RecordErrorServer(w, err, "Home.DeleteHomeMate.FindByEmail")
 			return
 		}
 	}
 
 	err = c.homeMateLogic.Delete(h.ID, u.Id)
 	if err != nil {
-		log.Printf("Error deleting home mate: %s - %s", slug, email)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		utils.RecordErrorServer(w, err, "Home.DeleteHomeMate.Delete")
 	}
 
 	w.Write([]byte("ok"))
 }
 
-func (c HomeController) VerifyUserForAdminAction(slug string, r *http.Request) (user.User, Home, error) {
+func (c HomeController) VerifyUserForAdminAction(slug string, w http.ResponseWriter, r *http.Request) (user.User, Home, error) {
 	var u user.User
 	var h Home
 	var ok bool
@@ -269,6 +233,7 @@ func (c HomeController) VerifyUserForAdminAction(slug string, r *http.Request) (
 		return u, h, err
 	}
 
+	u, ok = user.RetrieveUserFromContext(w, r)
 	u, ok = r.Context().Value("user").(user.User)
 	if !ok {
 		return u, h, errors.New("user not in context")
