@@ -4,22 +4,44 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { verifyMateRole } from "@/api";
+import { signOut } from "next-auth/react";
 
-const defaultNavLinks = [
+const signedInLinks = [{ name: "Profile", href: "/profile" }];
+const signedOutLinks = [
   { name: "About", href: "/about" },
-  { name: "Profile", href: "/profile" },
+  {
+    name: "Sign In",
+    href: "/login",
+  },
 ];
+
+interface NavbarProps {
+  isSignedIn: boolean;
+}
 
 type NavbarParams = {
   slug?: string;
 };
 
 // Example Navbar component structure with links and state for mobile menu
-export default function Navbar() {
+export default function Navbar({ isSignedIn }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [sessionSlug, setSessionSlug] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
   const params = useParams<NavbarParams>();
+
+  const slug = params?.slug || sessionSlug;
+
+  useEffect(() => {
+    if (params?.slug) {
+      return;
+    }
+    const savedSlug = sessionStorage.getItem("last_home_slug");
+    if (savedSlug) {
+      setSessionSlug(savedSlug);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (!params?.slug) {
@@ -36,23 +58,25 @@ export default function Navbar() {
     };
 
     checkAdmin(params.slug);
-  }, []);
+  }, [pathname]);
 
   const navLinks = [];
 
-  if (params.slug) {
-    if (isAdmin) {
+  if (isSignedIn) {
+    if (slug) {
       navLinks.push({
         name: "Manage Home",
-        href: `/home/${params.slug}/manage`,
+        href: `/home/${slug}/manage`,
       });
+      navLinks.push({ name: "Calendar", href: `/home/${slug}` });
+    } else {
+      navLinks.push({ name: "Select Home", href: `/home/select` });
     }
-    navLinks.push({ name: "Calendar", href: `/home/${params.slug}` });
-  } else {
-    navLinks.push({ name: "Select Home", href: `/home/select` });
-  }
 
-  defaultNavLinks.forEach((link) => navLinks.push(link));
+    signedInLinks.forEach((link) => navLinks.push(link));
+  } else {
+    signedOutLinks.forEach((link) => navLinks.push(link));
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/80">
@@ -60,7 +84,7 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link
-            href="/"
+            href={slug ? `/home/${slug}/manage` : "/home/select"}
             className="text-xl font-bold text-text-light dark:text-text-dark"
           >
             HomeShare
@@ -81,6 +105,19 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
+            {isSignedIn && (
+              <span
+                className="rounded-md px-3 py-2 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white cursor-pointer"
+                onClick={() => {
+                  sessionStorage.clear();
+                  signOut({
+                    redirectTo: "/login",
+                  });
+                }}
+              >
+                Sign Out
+              </span>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -140,6 +177,19 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
+          {isSignedIn && (
+            <span
+              className="block rounded-md px-3 py-2 text-base font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white cursor-pointer"
+              onClick={() => {
+                sessionStorage.clear();
+                signOut({
+                  redirectTo: "/login",
+                });
+              }}
+            >
+              Sign Out
+            </span>
+          )}
         </div>
       </div>
     </nav>
