@@ -16,83 +16,84 @@ async function getAccessToken() {
   return session.accessToken;
 }
 
+async function makeRequest(url: URL, init?: RequestInit, isUnauthed?: boolean) {
+  let headers = {};
+  if (!isUnauthed) {
+    const accessToken = await getAccessToken();
+    headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
+
+  try {
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        ...headers,
+        ...init?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new UnauthorizedError(`url: ${url.pathname}`);
+      } else if (response.status === 403) {
+        throw new ForbiddenError(`url: ${url.pathname}`);
+      } else {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+    }
+
+    if (response.headers.get("Content-Type") === "application/json") {
+      return response.json();
+    }
+
+    return;
+  } catch (error) {
+    if (!(error instanceof ForbiddenError || UnauthorizedError)) {
+      console.error("Error:", error);
+    }
+    throw error;
+  }
+}
+
 export async function createEntry(start: string, end: string) {
-  const accessToken = await getAccessToken();
   const data = {
     start,
     end,
   };
   const url = new URL(`${API_URL}/v1/entry`);
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+  await makeRequest(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function updateEntry(entryId: number, entryValue: number) {
-  const accessToken = await getAccessToken();
   const data = {
     value: entryValue,
   };
   const url = new URL(`${API_URL}/v1/entry/${entryId}`);
-  try {
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return;
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+  await makeRequest(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function deleteEntry(entryId: number) {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/entry/${entryId}`);
-  try {
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+  await makeRequest(url, {
+    method: "DELETE",
+  });
 }
 
 export async function fetchListEntries(userId: number) {
-  const accessToken = await getAccessToken();
   const startDateString = convertTimeToUTCISO("00:00:00");
   const endDateString = convertTimeToUTCISO("23:59:59");
   const params = {
@@ -102,20 +103,8 @@ export async function fetchListEntries(userId: number) {
   };
   const url = new URL(`${API_URL}/v1/entry`);
   url.search = new URLSearchParams(params).toString();
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    return response.json();
-  } catch (err) {
-    console.error("Something bad happend", err);
-    throw err;
-  }
+
+  return makeRequest(url);
 }
 
 export async function requestOtp(email: string) {
@@ -123,24 +112,17 @@ export async function requestOtp(email: string) {
     email,
   };
   const url = new URL(`${API_URL}/v1/otp`);
-  try {
-    const response = await fetch(url, {
+  await makeRequest(
+    url,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return;
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+    },
+    true,
+  );
 }
 
 export async function verifyOtp(email: string, otp: string) {
@@ -149,159 +131,69 @@ export async function verifyOtp(email: string, otp: string) {
     otp,
   };
   const url = new URL(`${API_URL}/v1/otp/verify`);
-  try {
-    const response = await fetch(url, {
+  return makeRequest(
+    url,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+    },
+    true,
+  );
 }
 
 export async function fetchMateProfile() {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/user`);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("fetchMateProfile");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    const responseData = await response.json();
-    return responseData as MateProfile;
-  } catch (err) {
-    console.error("Error in fetchListHomeMates", err);
-    throw err;
-  }
+
+  const responseData = await makeRequest(url);
+  return responseData as MateProfile;
 }
 
 export async function updateMateProfile(name: string) {
-  const accessToken = await getAccessToken();
   const data = {
     name,
   };
   const url = new URL(`${API_URL}/v1/user`);
-  try {
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("updateMateProfile");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    return;
-  } catch (err) {
-    console.error("Error in fetchListHomeMates", err);
-    throw err;
-  }
+  await makeRequest(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchListHomes() {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/homes`);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("fetchListHomes");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    const responseData = await response.json();
-    if (responseData) {
-      return responseData as Home[];
-    } else {
-      return [] as Home[];
-    }
-  } catch (err) {
-    console.error("Error in fetchListHomes", err);
-    throw err;
+  const responseData = await makeRequest(url);
+  if (responseData) {
+    return responseData as Home[];
+  } else {
+    return [] as Home[];
   }
 }
 
 export async function fetchHome(slug: string) {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/home/${slug}`);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("readHome");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    const responseData = await response.json();
-    return responseData as Home;
-  } catch (err) {
-    console.error("Error in fetchListHomes", err);
-    throw err;
-  }
+  const responseData = await makeRequest(url);
+  return responseData as Home;
 }
 
 export async function createHome(name: string, description: string) {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/home`);
   const data = {
     name,
     description,
   };
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("createHome");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    return;
-  } catch (err) {
-    console.error("Error in createHome", err);
-    throw err;
-  }
+  await makeRequest(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function createHomeMate(
@@ -309,112 +201,48 @@ export async function createHomeMate(
   name: string,
   email: string,
 ) {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/home/${homeSlug}/mate`);
   const data = {
     email,
     name,
   };
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("fetchListHomeMates");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    return;
-  } catch (err) {
-    console.error("Error in fetchListHomeMates", err);
-    throw err;
-  }
+  await makeRequest(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
+
 export async function fetchListHomeMates(homeSlug: string) {
-  const accessToken = await getAccessToken();
   const url = new URL(`${API_URL}/v1/home/${homeSlug}/mates`);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new UnauthorizedError("fetchListHomeMates");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-    const responseData = await response.json();
-    return responseData as HomeMate[];
-  } catch (err) {
-    console.error("Error in fetchListHomeMates", err);
-    throw err;
-  }
+  const responseData = await makeRequest(url);
+  return responseData as HomeMate[];
 }
 
 export async function deleteHomeMate(slug: string, email: string) {
-  const accessToken = await getAccessToken();
   const params = {
     email,
   };
   const url = new URL(`${API_URL}/v1/home/${slug}/mate`);
   url.search = new URLSearchParams(params).toString();
-  try {
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return;
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+  await makeRequest(url, {
+    method: "DELETE",
+  });
 }
 
 export async function verifyMateRole(homeSlug: string, role: "Admin" | "Mate") {
-  const accessToken = await getAccessToken();
   const data = {
     homeSlug,
     role,
   };
   const url = new URL(`${API_URL}/v1/auth/role/verify`);
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      if (response.status === 403) {
-        throw new ForbiddenError("fetchMateProfile");
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    }
-  } catch (error) {
-    if (!(error instanceof ForbiddenError)) {
-      console.error("Error:", error);
-    }
-    throw error;
-  }
+  await makeRequest(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }

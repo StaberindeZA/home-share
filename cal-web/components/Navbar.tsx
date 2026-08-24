@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { verifyMateRole } from "@/api";
 import { signOut } from "next-auth/react";
 
 const signedInLinks = [{ name: "Profile", href: "/profile" }];
@@ -27,7 +26,6 @@ type NavbarParams = {
 export default function Navbar({ isSignedIn }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [sessionSlug, setSessionSlug] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
   const params = useParams<NavbarParams>();
 
@@ -41,23 +39,6 @@ export default function Navbar({ isSignedIn }: NavbarProps) {
     if (savedSlug) {
       setSessionSlug(savedSlug);
     }
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!params?.slug) {
-      return;
-    }
-
-    const checkAdmin = async (slug: string) => {
-      try {
-        await verifyMateRole(slug, "Admin");
-        setIsAdmin(true);
-      } catch (error) {
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdmin(params.slug);
   }, [pathname]);
 
   const navLinks = [];
