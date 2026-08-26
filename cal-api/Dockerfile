@@ -4,13 +4,13 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/migration cmd/db/migration/main.go
+
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/main cmd/server/main.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/init cmd/db/init/init.go
-
-FROM alpine:latest AS initializer
-COPY --from=builder /bin/init .
-CMD ["./init"]
+FROM alpine:latest AS db-migration
+COPY --from=builder /bin/migration .
+CMD ["./migration"]
 
 # Target 2: Main Service
 FROM alpine:latest AS app

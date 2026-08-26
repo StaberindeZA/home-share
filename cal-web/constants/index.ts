@@ -2,12 +2,6 @@ import { Row } from "@/types";
 
 export const API_URL = process.env.API_URL || "";
 
-const workspaceUserIdsRaw = process.env.WORKSPACE_USER_IDS || "1,2";
-
-export const workspaceUserIds = workspaceUserIdsRaw
-  .split(",")
-  .map((id) => parseInt(id));
-
 export const rows: Row[] = [
   {
     start: "09:00:00",

@@ -7,7 +7,6 @@
 # To ensure security and compatibility, regularly update the NODE_VERSION ARG to the latest LTS version.
 ARG NODE_VERSION=24.18.0-slim
 
-
 FROM node:${NODE_VERSION} AS dependencies
 
 # Set working directory
@@ -33,6 +32,8 @@ RUN pnpm install --config.strict-dep-builds=false --frozen-lockfile
 # ============================================
 
 FROM node:${NODE_VERSION} AS builder
+
+ARG API_URL
 
 # Set working directory
 WORKDIR /app

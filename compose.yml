@@ -4,6 +4,8 @@ services:
     build:
       context: cal-web/.
       dockerfile: Dockerfile
+      args:
+        - API_URL=http://localhost:8080
     image: cal-web-image 
     container_name: cal-web-container
     environment:
@@ -16,10 +18,13 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
-  cal-api-init:
+  cal-api-db-migration:
     build:
       context: cal-api/.
-      target: initializer
+      target: db-migration
+    env_file:
+      - cal-api/.env
+      - cal-api/.env.production
     volumes:
       - "cal-api-assets:/data" 
     restart: "no"
@@ -38,7 +43,7 @@ services:
     volumes:
       - "cal-api-assets:/data" 
     depends_on:
-      cal-api-init:
+      cal-api-db-migration:
         condition: service_completed_successfully
 
 volumes:

@@ -14,14 +14,15 @@ func main() {
 	force := flag.Bool("force", false, "Force re-init of DB. WARNING!!! This drops the databases.")
 	flag.Parse()
 
-	if _, err := os.Stat("data/app.db"); err == nil {
+	dbHost := os.Getenv("DB_HOST")
+	if _, err := os.Stat(dbHost); err == nil {
 		if !*force {
 			log.Println("SQLite db already exists. Skipping init.")
 			os.Exit(0)
 		}
 	}
 
-	db, err := sql.Open("sqlite", "data/app.db?_time_format=sqlite")
+	db, err := sql.Open("sqlite", dbHost+"?_time_format=sqlite")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
@@ -119,6 +120,33 @@ func main() {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 	if _, err := db.Exec(homeMatesSchema); err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	listsSchema := `
+	CREATE TABLE IF NOT EXISTS lists (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		slug TEXT NOT NULL UNIQUE,
+		home_id INTEGER REFERENCES homes(id) ON DELETE CASCADE,
+		mate_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err := db.Exec(listsSchema); err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	listItemsSchema := `
+	CREATE TABLE IF NOT EXISTS listItems (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		list_id INTEGER REFERENCES lists(id) ON DELETE CASCADE,
+		mate_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		short_text TEXT,
+		long_text TEXT,
+		completed_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err := db.Exec(listItemsSchema); err != nil {
 		log.Fatalf("Failed to create table: %v", err)
 	}
 	fmt.Println("Table verified successfully.")
